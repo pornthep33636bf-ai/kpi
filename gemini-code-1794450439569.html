@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ระบบสรุปรายงานยอดขาย (Sales Report Dashboard)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Sarabun & Prompt -->
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    body { font-family: 'Prompt', sans-serif; background-color: #f8fafc; }
+    @media print {
+      .no-print { display: none !important; }
+      body { background-color: #ffffff; }
+      .print-shadow-none { box-shadow: none !important; border: 1px solid #e2e8f0; }
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased">
+
+  <!-- Navbar -->
+  <header class="bg-indigo-700 text-white shadow-md no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-white/20 p-2.5 rounded-lg">
+          <i class="fa-solid fa-chart-line text-2xl"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-wide">Sales Report Dashboard</h1>
+          <p class="text-indigo-200 text-xs">ระบบสรุปรายงานยอดขาย จัดการรายชื่อ Sale และบิลขาย</p>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button onclick="openSaleModal()" class="bg-indigo-600 hover:bg-indigo-500 border border-indigo-400 px-3.5 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+          <i class="fa-solid fa-user-plus"></i> จัดการรายชื่อ Sale
+        </button>
+        <button onclick="openBillModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition flex items-center gap-2">
+          <i class="fa-solid fa-plus"></i> เพิ่มบิลขายใหม่
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+
+    <!-- KPI Cards -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 print-shadow-none">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs font-medium text-slate-500 uppercase">ยอดขายรวมทั้งหมด</p>
+            <h2 id="kpi-total-sales" class="text-2xl font-bold text-indigo-700 mt-1">฿0.00</h2>
+          </div>
+          <span class="bg-indigo-50 text-indigo-600 p-2.5 rounded-lg"><i class="fa-solid fa-baht-sign"></i></span>
+        </div>
+      </div>
+
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 print-shadow-none">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs font-medium text-slate-500 uppercase">จำนวนบิลทั้งหมด</p>
+            <h2 id="kpi-total-bills" class="text-2xl font-bold text-slate-800 mt-1">0 บิล</h2>
+          </div>
+          <span class="bg-blue-50 text-blue-600 p-2.5 rounded-lg"><i class="fa-solid fa-file-invoice"></i></span>
+        </div>
+      </div>
+
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 print-shadow-none">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs font-medium text-slate-500 uppercase">ยอดขายเฉลี่ย / บิล</p>
+            <h2 id="kpi-avg-sales" class="text-2xl font-bold text-slate-800 mt-1">฿0.00</h2>
+          </div>
+          <span class="bg-amber-50 text-amber-600 p-2.5 rounded-lg"><i class="fa-solid fa-calculator"></i></span>
+        </div>
+      </div>
+
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 print-shadow-none">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs font-medium text-slate-500 uppercase">Top Sale (ยอดสูงสุด)</p>
+            <h2 id="kpi-top-sale" class="text-xl font-bold text-emerald-600 mt-1 truncate">-</h2>
+            <p id="kpi-top-sale-amount" class="text-xs text-slate-500 mt-0.5">฿0.00</p>
+          </div>
+          <span class="bg-emerald-50 text-emerald-600 p-2.5 rounded-lg"><i class="fa-solid fa-trophy"></i></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- สรุปยอดแยกตามรายชื่อ Sale -->
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print-shadow-none">
+      <div class="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+        <div>
+          <h3 class="text-base font-bold text-slate-800"><i class="fa-solid fa-users text-indigo-600 mr-2"></i>สรุปผลงานแยกตามรายชื่อ Sale</h3>
+          <p class="text-xs text-slate-500">คำนวณจากรายการบิลที่แสดงอยู่ตามตัวกรองด้านล่าง</p>
+        </div>
+        <div class="flex gap-2 no-print">
+          <button onclick="exportCSV()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5">
+            <i class="fa-solid fa-file-csv text-emerald-600"></i> Export CSV
+          </button>
+          <button onclick="window.print()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5">
+            <i class="fa-solid fa-print text-indigo-600"></i> พิมพ์รายงาน
+          </button>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 text-slate-600 text-xs uppercase border-b border-slate-200">
+              <th class="py-3 px-6 font-semibold">ชื่อ Sale</th>
+              <th class="py-3 px-6 font-semibold text-center">จำนวนบิล</th>
+              <th class="py-3 px-6 font-semibold text-right">ยอดเฉลี่ย/บิล</th>
+              <th class="py-3 px-6 font-semibold text-right">ยอดขายรวม</th>
+              <th class="py-3 px-6 font-semibold w-48">สัดส่วนยอดขาย (%)</th>
+            </tr>
+          </thead>
+          <tbody id="sale-summary-body" class="divide-y divide-slate-100 text-sm">
+            <!-- Render via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ตัวกรองและรายการบิลทั้งหมด -->
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print-shadow-none">
+      <div class="p-6 border-b border-slate-200 space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <h3 class="text-base font-bold text-slate-800"><i class="fa-solid fa-list-check text-indigo-600 mr-2"></i>รายละเอียดบิลขายทั้งหมด (แก้ไขยอด & Sale ในตารางได้ทันที)</h3>
+          <button onclick="resetDemoData()" class="text-xs text-rose-500 hover:underline no-print">รีเซ็ตข้อมูลตัวอย่าง</button>
+        </div>
+
+        <!-- Filters -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 no-print">
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">ค้นหาเลขบิล / ลูกค้า / หมายเหตุ</label>
+            <input type="text" id="filter-search" oninput="renderAll()" placeholder="พิมพ์คำค้นหา..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">กรองตามชื่อ Sale</label>
+            <select id="filter-sale" onchange="renderAll()" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="ALL">แสดง Sale ทุกคน</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">ตั้งแต่วันที่</label>
+            <input type="date" id="filter-date-start" onchange="renderAll()" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">ถึงวันที่</label>
+            <input type="date" id="filter-date-end" onchange="renderAll()" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+      </div>
+
+      <!-- Bills Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 text-slate-600 text-xs uppercase border-b border-slate-200">
+              <th class="py-3 px-4 font-semibold">เลขที่บิล</th>
+              <th class="py-3 px-4 font-semibold">วันที่</th>
+              <th class="py-3 px-4 font-semibold">ชื่อลูกค้า / รายละเอียด</th>
+              <th class="py-3 px-4 font-semibold">ผู้ขาย (Sale)</th>
+              <th class="py-3 px-4 font-semibold text-right">ยอดเงิน (บาท)</th>
+              <th class="py-3 px-4 font-semibold text-center no-print">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="bills-table-body" class="divide-y divide-slate-100 text-sm">
+            <!-- Render via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL 1: เพิ่ม / แก้ไข บิลขาย -->
+  <div id="bill-modal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
+      <div class="px-6 py-4 bg-indigo-700 text-white flex justify-between items-center">
+        <h3 id="bill-modal-title" class="font-bold text-lg">เพิ่มบิลขายใหม่</h3>
+        <button onclick="closeBillModal()" class="text-white/80 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+      </div>
+      <form id="bill-form" onsubmit="saveBill(event)" class="p-6 space-y-4">
+        <input type="hidden" id="bill-id">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">เลขที่บิล *</label>
+            <input type="text" id="bill-no" required placeholder="เช่น INV-2026001" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">วันที่ออกบิล *</label>
+            <input type="date" id="bill-date" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อ Sale ผู้รับผิดชอบ *</label>
+          <select id="bill-sale" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            <!-- Options from JS -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อลูกค้า / บริษัท *</label>
+          <input type="text" id="bill-customer" required placeholder="ระบุชื่อลูกค้า" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">ยอดเงินรวม (บาท) *</label>
+          <input type="number" id="bill-amount" step="0.01" min="0" required placeholder="0.00" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">หมายเหตุ (ถ้ามี)</label>
+          <input type="text" id="bill-note" placeholder="รายละเอียดเพิ่มเติม..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="closeBillModal()" class="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100">ยกเลิก</button>
+          <button type="submit" class="px-5 py-2 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow">บันทึกข้อมูลบิล</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: จัดการรายชื่อ Sale -->
+  <div id="sale-modal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
+      <div class="px-6 py-4 bg-slate-800 text-white flex justify-between items-center">
+        <h3 class="font-bold text-lg"><i class="fa-solid fa-users-gear mr-2"></i>จัดการรายชื่อ Sale</h3>
+        <button onclick="closeSaleModal()" class="text-white/80 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+      </div>
+      <div class="p-6 space-y-4">
+        <!-- Form เพิ่ม Sale -->
+        <form onsubmit="addSale(event)" class="flex gap-2">
+          <input type="text" id="new-sale-name" required placeholder="พิมพ์ชื่อ Sale ใหม่..." class="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">
+            + เพิ่มชื่อ
+          </button>
+        </form>
+
+        <div class="border-t border-slate-200 pt-3">
+          <p class="text-xs text-slate-500 mb-2">รายชื่อ Sale ปัจจุบัน (สามารถแก้ไขชื่อหรือลบได้):</p>
+          <ul id="sale-list-manage" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+            <!-- Render via JS -->
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- ข้อมูลเริ่มต้น (Default Data) ---
+    const defaultSales = ['คุณสมชาย (Sale A)', 'คุณวิภาดา (Sale B)', 'คุณธนากร (Sale C)'];
+    const defaultBills = [
+      { id: 1, billNo: 'INV-2026001', date: '2026-11-01', customer: 'บจก. สยามเทค โซลูชั่น', sale: 'คุณสมชาย (Sale A)', amount: 45000, note: 'แพ็กเกจรายปี' },
+      { id: 2, billNo: 'INV-2026002', date: '2026-11-03', customer: 'ร้าน กาแฟดี คาเฟ่', sale: 'คุณวิภาดา (Sale B)', amount: 18500, note: 'อุปกรณ์ POS' },
+      { id: 3, billNo: 'INV-2026003', date: '2026-11-05', customer: 'บมจ. ไทยรุ่งเรือง', sale: 'คุณสมชาย (Sale A)', amount: 120000, note: 'สั่งซื้อล็อตใหญ่' },
+      { id: 4, billNo: 'INV-2026004', date: '2026-11-08', customer: 'คลินิกความงาม ด็อกเตอร์เอ', sale: 'คุณธนากร (Sale C)', amount: 32000, note: '' },
+      { id: 5, billNo: 'INV-2026005', date: '2026-11-10', customer: 'บจก. เคเอส เทรดดิ้ง', sale: 'คุณวิภาดา (Sale B)', amount: 54000, note: 'ต่อสัญญาบริการ' }
+    ];
+
+    // โหลดข้อมูลจาก LocalStorage
+    let salesList = JSON.parse(localStorage.getItem('sr_sales')) || [...defaultSales];
+    let billsList = JSON.parse(localStorage.getItem('sr_bills')) || [...defaultBills];
+
+    function saveDataToStorage() {
+      localStorage.setItem('sr_sales', JSON.stringify(salesList));
+      localStorage.setItem('sr_bills', JSON.stringify(billsList));
+    }
+
+    function resetDemoData() {
+      if (confirm('ต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นใช่หรือไม่?')) {
+        salesList = [...defaultSales];
+        billsList = [...defaultBills];
+        saveDataToStorage();
+        updateSaleDropdowns();
+        renderAll();
+      }
+    }
+
+    // --- จัดรูปแบบตัวเลขเงิน ---
+    function formatMoney(num) {
+      return Number(num).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // --- อัปเดต Dropdown รายชื่อ Sale ---
+    function updateSaleDropdowns() {
+      const filterSelect = document.getElementById('filter-sale');
+      const modalSelect = document.getElementById('bill-sale');
+      const currentFilter = filterSelect.value;
+
+      filterSelect.innerHTML = `<option value="ALL">แสดง Sale ทุกคน (${salesList.length})</option>`;
+      modalSelect.innerHTML = '';
+
+      salesList.forEach(sale => {
+        filterSelect.innerHTML += `<option value="${sale}">${sale}</option>`;
+        modalSelect.innerHTML += `<option value="${sale}">${sale}</option>`;
+      });
+
+      if (salesList.includes(currentFilter)) {
+        filterSelect.value = currentFilter;
+      }
+    }
+
+    // --- กรองข้อมูลบิล ---
+    function getFilteredBills() {
+      const search = document.getElementById('filter-search').value.toLowerCase().trim();
+      const saleFilter = document.getElementById('filter-sale').value;
+      const dateStart = document.getElementById('filter-date-start').value;
+      const dateEnd = document.getElementById('filter-date-end').value;
+
+      return billsList.filter(b => {
+        const matchSearch = !search || 
+          b.billNo.toLowerCase().includes(search) || 
+          b.customer.toLowerCase().includes(search) || 
+          (b.note && b.note.toLowerCase().includes(search));
+        const matchSale = saleFilter === 'ALL' || b.sale === saleFilter;
+        const matchStart = !dateStart || b.date >= dateStart;
+        const matchEnd = !dateEnd || b.date <= dateEnd;
+        return matchSearch && matchSale && matchStart && matchEnd;
+      }).sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
+
+    // --- แสดงผลทั้งหมด ---
+    function renderAll() {
+      const filtered = getFilteredBills();
+
+      // 1. คำนวณ KPI
+      const totalAmount = filtered.reduce((sum, b) => sum + Number(b.amount), 0);
+      const totalCount = filtered.length;
+      const avgAmount = totalCount > 0 ? totalAmount / totalCount : 0;
+
+      // สรุปยอดตาม Sale
+      const summaryMap = {};
+      salesList.forEach(s => summaryMap[s] = { count: 0, total: 0 });
+      filtered.forEach(b => {
+        if (!summaryMap[b.sale]) summaryMap[b.sale] = { count: 0, total: 0 };
+        summaryMap[b.sale].count += 1;
+        summaryMap[b.sale].total += Number(b.amount);
+      });
+
+      // หา Top Sale
+      let topSaleName = '-';
+      let topSaleVal = 0;
+      Object.entries(summaryMap).forEach(([name, data]) => {
+        if (data.total > topSaleVal) {
+          topSaleVal = data.total;
+          topSaleName = name;
+        }
+      });
+
+      document.getElementById('kpi-total-sales').innerText = `฿${formatMoney(totalAmount)}`;
+      document.getElementById('kpi-total-bills').innerText = `${totalCount} บิล`;
+      document.getElementById('kpi-avg-sales').innerText = `฿${formatMoney(avgAmount)}`;
+      document.getElementById('kpi-top-sale').innerText = topSaleName;
+      document.getElementById('kpi-top-sale-amount').innerText = `ยอดขาย ฿${formatMoney(topSaleVal)}`;
+
+      // 2. Render ตารางสรุปแยกตาม Sale
+      const summaryBody = document.getElementById('sale-summary-body');
+      summaryBody.innerHTML = '';
+      const sortedSummary = Object.entries(summaryMap).sort((a, b) => b[1].total - a[1].total);
+
+      sortedSummary.forEach(([saleName, data]) => {
+        const avg = data.count > 0 ? data.total / data.count : 0;
+        const percent = totalAmount > 0 ? ((data.total / totalAmount) * 100).toFixed(1) : 0;
+        summaryBody.innerHTML += `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="py-3 px-6 font-medium text-slate-800">${saleName}</td>
+            <td class="py-3 px-6 text-center">${data.count}</td>
+            <td class="py-3 px-6 text-right text-slate-600">฿${formatMoney(avg)}</td>
+            <td class="py-3 px-6 text-right font-bold text-indigo-700">฿${formatMoney(data.total)}</td>
+            <td class="py-3 px-6">
+              <div class="flex items-center gap-2">
+                <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                  <div class="bg-indigo-600 h-2 rounded-full" style="width: ${percent}%"></div>
+                </div>
+                <span class="text-xs font-medium text-slate-600 w-10 text-right">${percent}%</span>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+
+      // 3. Render ตารางบิลรายละเอียด (รองรับ Inline Edit)
+      const billsBody = document.getElementById('bills-table-body');
+      billsBody.innerHTML = '';
+
+      if (filtered.length === 0) {
+        billsBody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">ไม่พบข้อมูลบิลขายตามเงื่อนไขที่เลือก</td></tr>`;
+        return;
+      }
+
+      filtered.forEach(bill => {
+        const saleOptions = salesList.map(s => 
+          `<option value="${s}" ${s === bill.sale ? 'selected' : ''}>${s}</option>`
+        ).join('');
+
+        billsBody.innerHTML += `
+          <tr class="hover:bg-indigo-50/40 transition">
+            <td class="py-3 px-4 font-semibold text-indigo-700 whitespace-nowrap">${bill.billNo}</td>
+            <td class="py-3 px-4 text-slate-600 whitespace-nowrap">${bill.date}</td>
+            <td class="py-3 px-4">
+              <div class="font-medium text-slate-800">${bill.customer}</div>
+              ${bill.note ? `<div class="text-xs text-slate-400">${bill.note}</div>` : ''}
+            </td>
+            <td class="py-3 px-4">
+              <select onchange="quickChangeSale(${bill.id}, this.value)" class="bg-white border border-slate-200 hover:border-indigo-400 rounded-md px-2 py-1 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                ${saleOptions}
+              </select>
+            </td>
+            <td class="py-3 px-4 text-right">
+              <input type="number" step="0.01" value="${bill.amount}" onchange="quickChangeAmount(${bill.id}, this.value)" 
+                class="w-32 text-right font-bold text-slate-800 bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-indigo-500 rounded px-2 py-1 outline-none transition">
+            </td>
+            <td class="py-3 px-4 text-center whitespace-nowrap no-print">
+              <button onclick="openBillModal(${bill.id})" title="แก้ไขบิลเต็มรูปแบบ" class="text-amber-600 hover:bg-amber-50 p-1.5 rounded-lg transition">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </button>
+              <button onclick="deleteBill(${bill.id})" title="ลบบิล" class="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition ml-1">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    // --- Quick Inline Edit ในตาราง ---
+    function quickChangeSale(billId, newSale) {
+      const idx = billsList.findIndex(b => b.id === billId);
+      if (idx !== -1) {
+        billsList[idx].sale = newSale;
+        saveDataToStorage();
+        renderAll();
+      }
+    }
+
+    function quickChangeAmount(billId, newAmount) {
+      const val = parseFloat(newAmount);
+      if (isNaN(val) || val < 0) {
+        alert('กรุณากรอกยอดเงินที่ถูกต้อง');
+        renderAll();
+        return;
+      }
+      const idx = billsList.findIndex(b => b.id === billId);
+      if (idx !== -1) {
+        billsList[idx].amount = val;
+        saveDataToStorage();
+        renderAll();
+      }
+    }
+
+    // --- จัดการ Modal บิลขาย ---
+    function openBillModal(billId = null) {
+      if (salesList.length === 0) {
+        alert('กรุณาเพิ่มรายชื่อ Sale อย่างน้อย 1 คนก่อนสร้างบิลครับ');
+        openSaleModal();
+        return;
+      }
+
+      const modal = document.getElementById('bill-modal');
+      const title = document.getElementById('bill-modal-title');
+      document.getElementById('bill-form').reset();
+
+      if (billId) {
+        const bill = billsList.find(b => b.id === billId);
+        title.innerText = 'แก้ไขรายละเอียดบิลขาย';
+        document.getElementById('bill-id').value = bill.id;
+        document.getElementById('bill-no').value = bill.billNo;
+        document.getElementById('bill-date').value = bill.date;
+        document.getElementById('bill-sale').value = bill.sale;
+        document.getElementById('bill-customer').value = bill.customer;
+        document.getElementById('bill-amount').value = bill.amount;
+        document.getElementById('bill-note').value = bill.note || '';
+      } else {
+        title.innerText = 'เพิ่มบิลขายใหม่';
+        document.getElementById('bill-id').value = '';
+        document.getElementById('bill-no').value = `INV-${new Date().getFullYear()}${String(billsList.length + 1).padStart(3, '0')}`;
+        document.getElementById('bill-date').value = new Date().toISOString().split('T')[0];
+      }
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeBillModal() {
+      const modal = document.getElementById('bill-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function saveBill(e) {
+      e.preventDefault();
+      const id = document.getElementById('bill-id').value;
+      const billData = {
+        id: id ? Number(id) : Date.now(),
+        billNo: document.getElementById('bill-no').value.trim(),
+        date: document.getElementById('bill-date').value,
+        sale: document.getElementById('bill-sale').value,
+        customer: document.getElementById('bill-customer').value.trim(),
+        amount: parseFloat(document.getElementById('bill-amount').value),
+        note: document.getElementById('bill-note').value.trim()
+      };
+
+      if (id) {
+        const idx = billsList.findIndex(b => b.id === Number(id));
+        if (idx !== -1) billsList[idx] = billData;
+      } else {
+        billsList.push(billData);
+      }
+
+      saveDataToStorage();
+      closeBillModal();
+      renderAll();
+    }
+
+    function deleteBill(id) {
+      if (confirm('ยืนยันการลบบิลนี้ใช่หรือไม่?')) {
+        billsList = billsList.filter(b => b.id !== id);
+        saveDataToStorage();
+        renderAll();
+      }
+    }
+
+    // --- จัดการ Modal รายชื่อ Sale ---
+    function openSaleModal() {
+      renderSaleManageList();
+      const modal = document.getElementById('sale-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeSaleModal() {
+      const modal = document.getElementById('sale-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function renderSaleManageList() {
+      const ul = document.getElementById('sale-list-manage');
+      ul.innerHTML = '';
+      salesList.forEach((sale, index) => {
+        ul.innerHTML += `
+          <li class="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
+            <span class="text-sm font-medium text-slate-700">${sale}</span>
+            <div class="flex gap-1">
+              <button onclick="renameSale(${index})" title="แก้ไขชื่อ" class="text-amber-600 hover:bg-amber-100 px-2 py-1 rounded text-xs">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button onclick="deleteSale(${index})" title="ลบรายชื่อ" class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded text-xs">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </li>
+        `;
+      });
+    }
+
+    function addSale(e) {
+      e.preventDefault();
+      const input = document.getElementById('new-sale-name');
+      const name = input.value.trim();
+      if (!name) return;
+      if (salesList.includes(name)) {
+        alert('มีชื่อ Sale นี้อยู่ในระบบแล้วครับ');
+        return;
+      }
+      salesList.push(name);
+      input.value = '';
+      saveDataToStorage();
+      renderSaleManageList();
+      updateSaleDropdowns();
+      renderAll();
+    }
+
+    function renameSale(index) {
+      const oldName = salesList[index];
+      const newName = prompt('แก้ไขชื่อ Sale:', oldName);
+      if (newName && newName.trim() !== '' && newName.trim() !== oldName) {
+        const trimmed = newName.trim();
+        if (salesList.includes(trimmed)) {
+          alert('ชื่อซ้ำกับที่มีอยู่แล้วครับ');
+          return;
+        }
+        salesList[index] = trimmed;
+        // อัปเดตชื่อ Sale ในบิลเก่าทั้งหมดด้วย
+        billsList.forEach(b => {
+          if (b.sale === oldName) b.sale = trimmed;
+        });
+        saveDataToStorage();
+        renderSaleManageList();
+        updateSaleDropdowns();
+        renderAll();
+      }
+    }
+
+    function deleteSale(index) {
+      const target = salesList[index];
+      if (confirm(`ต้องการลบ "${target}" ออกจากรายชื่อ Sale ใช่หรือไม่? (บิลเก่าของคนนี้จะยังอยู่)`)) {
+        salesList.splice(index, 1);
+        saveDataToStorage();
+        renderSaleManageList();
+        updateSaleDropdowns();
+        renderAll();
+      }
+    }
+
+    // --- Export CSV ---
+    function exportCSV() {
+      const filtered = getFilteredBills();
+      if (filtered.length === 0) {
+        alert('ไม่มีข้อมูลสำหรับ Export');
+        return;
+      }
+      let csvContent = "\uFEFFเลขที่บิล,วันที่,ลูกค้า,ผู้ขาย (Sale),ยอดเงิน,หมายเหตุ\n";
+      filtered.forEach(b => {
+        const row = [
+          `"${b.billNo}"`,
+          `"${b.date}"`,
+          `"${b.customer.replace(/"/g, '""')}"`,
+          `"${b.sale}"`,
+          b.amount,
+          `"${(b.note || '').replace(/"/g, '""')}"`
+        ].join(",");
+        csvContent += row + "\n";
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `sales_report_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // เริ่มต้นทำงานเมื่อโหลดหน้าเว็บ
+    updateSaleDropdowns();
+    renderAll();
+  </script>
+</body>
+</html>
